@@ -1,0 +1,102 @@
+---
+title: "Final"
+author: "Linhan Zhang"
+date: "21/08/2021"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(aTSA)
+library(astsa)
+library(forecast)
+```
+
+#Data characteristics
+```{r}
+data = read.csv('essaydata.csv',header=TRUE)
+colnames(data)[1] <- "time"
+data_ts = ts(data$y, frequency = 12)
+
+plot.ts(data_ts, # Plot the aggregates together in one graph
+        plot.type=c("single"), # Specify its a single graph
+        main="Time series Plot", # Title 
+        ylab="y", # y axis label
+        xlab="Time",xaxs="i")# x axis label
+        #xaxt="n")
+data_ts
+```
+```{r}
+Acf(data_ts, lag.max = 180, type = c("correlation", "covariance", "partial"), plot = TRUE, na.action = na.contiguous, demean = TRUE)
+Pacf(data_ts, lag.max = 180, plot = TRUE, na.action = na.contiguous, demean = TRUE)
+```
+
+```{r}
+diff1 = diff(data_ts, lag = 12)
+Acf(diff1, lag.max = 180, type = c("correlation", "covariance", "partial"), plot = TRUE, na.action = na.contiguous, demean = TRUE)
+Pacf(diff1, lag.max = 180, plot = TRUE, na.action = na.contiguous, demean = TRUE)
+plot.ts(diff1, # Plot the aggregates together in one graph
+        plot.type=c("single"), # Specify its a single graph
+        main="Time series Plot", # Title 
+        ylab="y", # y axis label
+        xlab="Time",xaxs="i")# x axis label
+        #xaxt="n")
+diff2 = diff(diff1)
+Acf(diff2, lag.max = 180, type = c("correlation", "covariance", "partial"), plot = TRUE, na.action = na.contiguous, demean = TRUE)
+Pacf(diff2, lag.max = 180, plot = TRUE, na.action = na.contiguous, demean = TRUE)
+plot.ts(diff2, # Plot the aggregates together in one graph
+        plot.type=c("single"), # Specify its a single graph
+        main="Time series Plot", # Title 
+        ylab="y", # y axis label
+        xlab="Time",xaxs="i")# x axis label
+        #xaxt="n")
+
+```
+
+#Seasonal ARIMA
+```{r}
+auto.arima(data_ts, stepwise = F, approximation = F)
+s1 = arima(data_ts,order=c(1,1,2),seasonal=c(0,1,1))
+summary(s1)
+s1
+```
+```{r}
+s1_fit = fitted(s1)
+plot.ts(data_ts, # Plot the aggregates together in one graph
+        plot.type=c("single"), # Specify its a single graph
+        main="", # Title 
+        ylab="y", # y axis label
+        xlab="Time",
+        col = 'red')
+lines(s1_fit, col = 'blue')
+legend(x = "topleft", legend=c("Original Series", "Fitted Value"), col=c("red", "blue"), lty=1, cex=0.8)
+```
+```{r}
+summary(s1)
+forecast::forecast(s1, h = 12)%>%autoplot()
+predict(s1, n.ahead = 12)
+plot(forecast::forecast(s1, h = 12))
+checkresiduals(s1)
+```
+
+```{r}
+data_res = ts(s1$residuals,frequency=12)
+Box.test(data_res,lag=1,type="Ljung-Box")
+```
+#Holt-Winters
+```{r}
+h1<- hw(data_ts, seasonal = "multiplicative", h = 12)
+autoplot(h1)
+summary(h1)
+predict(h1, n.ahead = 12)
+checkresiduals(h1)
+h1$series
+data_res = ts(h1$residuals,frequency=12)
+Box.test(data_res,lag=1,type="Ljung-Box")
+```
+
